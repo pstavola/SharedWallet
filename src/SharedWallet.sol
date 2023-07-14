@@ -25,15 +25,10 @@ contract SharedWallet is
     function renewAllowance(address _user, uint _amount, uint _timeLimit) public onlyOwner {
         totalAllowance += _amount;
         require(totalAllowance <= address(this).balance, "Total allowance exceeds contract current balance");
-        require(_amount <= address(this).balance, "Amount is more than current balance");
 
-        //User memory allowance = User({amount: _amount, timeLimit: block.timestamp + _timeLimit});
         User memory userAllowance = users[_user];
         userAllowance.amount += _amount;
-        if (userAllowance.timeLimit == 0)
-            userAllowance.timeLimit = block.timestamp + _timeLimit;
-        else
-            userAllowance.timeLimit += _timeLimit;
+        userAllowance.timeLimit = block.timestamp + _timeLimit;
         users[_user] = userAllowance;
     }
 
@@ -41,12 +36,22 @@ contract SharedWallet is
         User memory userAllowance = users[msg.sender];
         require(_amount > 0, "Amount must be more than 0");
         require(_amount <= userAllowance.amount, "Not enough coins");
-        require(userAllowance.timeLimit > 0 && block.timestamp <= userAllowance.timeLimit, "Time limit expired");
+        require(block.timestamp <= userAllowance.timeLimit, "Time limit expired");
 
         userAllowance.amount -= _amount;
         users[msg.sender] = userAllowance;
+        totalAllowance -= _amount;
 
         (bool sent, ) = _receiver.call{value: _amount}("");
         require(sent, "Failed to send coins");
+    }
+
+    function checkAllowance() public view returns (uint,uint) {
+        User memory userAllowance = users[msg.sender];
+        return(userAllowance.amount, userAllowance.timeLimit);
+    }
+
+    function checkBalance() public view returns (uint) {
+        return(address(this).balance);
     }
 }
