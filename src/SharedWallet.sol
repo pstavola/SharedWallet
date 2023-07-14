@@ -18,13 +18,11 @@ contract SharedWallet is
     }
 
     mapping(address => User) public users;
-    uint public totalAllowance;
 
     receive() external payable onlyOwner {}
 
     function renewAllowance(address _user, uint _amount, uint _timeLimit) public onlyOwner {
-        totalAllowance += _amount;
-        require(totalAllowance <= address(this).balance, "Total allowance exceeds contract current balance");
+        require(_amount <= address(this).balance, "Allowance exceeds contract current balance");
 
         User memory userAllowance = users[_user];
         userAllowance.amount += _amount;
@@ -35,12 +33,12 @@ contract SharedWallet is
     function sendCoins(uint _amount, address payable _receiver) public {
         User memory userAllowance = users[msg.sender];
         require(_amount > 0, "Amount must be more than 0");
-        require(_amount <= userAllowance.amount, "Not enough coins");
+        require(_amount <= address(this).balance, "Amount exceeds contract current balance");
+        require(_amount <= userAllowance.amount, "Not enough coins in your allowance");
         require(block.timestamp <= userAllowance.timeLimit, "Time limit expired");
 
         userAllowance.amount -= _amount;
         users[msg.sender] = userAllowance;
-        totalAllowance -= _amount;
 
         (bool sent, ) = _receiver.call{value: _amount}("");
         require(sent, "Failed to send coins");
