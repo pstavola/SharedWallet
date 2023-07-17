@@ -18,11 +18,14 @@ contract SharedWallet is
     }
 
     event AllowanceRenewed(address indexed user, uint amount, uint timeLimit);
-    event CoinsSpent(address indexed receiver, uint amount);
+    event CoinsSent(address indexed receiver, uint amount);
+    event Deposit(uint amount);
 
     mapping(address => User) public users;
 
-    receive() external payable onlyOwner {}
+    receive() external payable onlyOwner {
+        emit Deposit(msg.value);
+    }
 
     function renewAllowance(address _user, uint _amount, uint _timeLimit) public onlyOwner {
         require(_amount <= address(this).balance, "Allowance exceeds contract current balance");
@@ -48,7 +51,7 @@ contract SharedWallet is
         (bool sent, ) = _receiver.call{value: _amount}("");
         require(sent, "Failed to send coins");
 
-        event CoinsSent(_receiver, _amount);
+        emit CoinsSent(_receiver, _amount);
     }
 
     function checkAllowance() public view returns (uint) {
